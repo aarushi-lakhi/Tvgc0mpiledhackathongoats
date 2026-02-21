@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, Send, Sparkles } from 'lucide-react';
+import { Bot, Loader2, Send, Sparkles } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -44,8 +44,10 @@ export function AICopilot() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -54,19 +56,40 @@ export function AICopilot() {
       timestamp: new Date(),
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInputValue('');
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: inputValue }),
+      });
+
+      const data = await res.json();
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I\'m processing your request using real-time grid data and predictive analytics. This is a demonstration response.',
+        content: res.ok
+          ? data.response
+          : 'Sorry, I encountered an error processing your request.',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content: 'Network error — is the backend server running?',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -129,6 +152,19 @@ export function AICopilot() {
             )}
           </div>
         ))}
+        {isLoading && (
+          <div className="flex gap-3 justify-start">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="bg-gray-100 rounded-lg px-4 py-3 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <span className="text-sm text-gray-500">Querying grid database...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
@@ -144,9 +180,10 @@ export function AICopilot() {
           />
           <button
             onClick={handleSend}
-            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            disabled={isLoading}
+            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send className="w-4 h-4" />
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
       </div>

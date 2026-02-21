@@ -34,27 +34,13 @@ export function ImageUploadModal({ isOpen, onClose }: ImageUploadModalProps) {
     setIsDragging(false);
   }, []);
 
-  const generateMockGPS = () => ({
-    lat: 30.2 + Math.random() * 0.1,
-    lng: -97.7 + Math.random() * 0.1,
-  });
-
-  const generateMockAnalysis = () => {
-    const risks = [
-      'Vegetation Encroachment',
-      'Transformer Rust',
-      'Wire Fatigue',
-      'Pole Degradation',
-      'Overloaded Circuit',
-      'Insulator Damage',
-    ];
-    const score = Math.floor(Math.random() * 60) + 30; // 30-90
-    return {
-      score,
-      risk: risks[Math.floor(Math.random() * risks.length)],
-      assetId: `AUS-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
-    };
-  };
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
   const processImages = async (files: File[]) => {
     const newImages: UploadedImage[] = files.map((file) => ({
@@ -66,31 +52,64 @@ export function ImageUploadModal({ isOpen, onClose }: ImageUploadModalProps) {
 
     setUploadedImages((prev) => [...prev, ...newImages]);
 
-    // Simulate GPS extraction and AI analysis
-    newImages.forEach((image, index) => {
-      setTimeout(() => {
-        const gps = generateMockGPS();
+    for (const image of newImages) {
+      const gps = {
+        lat: 30.2 + Math.random() * 0.1,
+        lng: -97.7 + Math.random() * 0.1,
+      };
+
+      setUploadedImages((prev) =>
+        prev.map((img) =>
+          img.preview === image.preview ? { ...img, gps } : img
+        )
+      );
+
+      try {
+        const b64 = await fileToBase64(image.file);
+        const res = await fetch('/api/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_base64: b64,
+            lat: gps.lat,
+            lng: gps.lng,
+          }),
+        });
+
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+
+        const data = await res.json();
         setUploadedImages((prev) =>
           prev.map((img) =>
             img.preview === image.preview
-              ? { ...img, gps }
+              ? {
+                  ...img,
+                  analyzing: false,
+                  complete: true,
+                  score: data.score,
+                  risk: data.risk_label,
+                  assetId: data.asset_id,
+                }
               : img
           )
         );
-
-        // Simulate AI analysis after GPS extraction
-        setTimeout(() => {
-          const analysis = generateMockAnalysis();
-          setUploadedImages((prev) =>
-            prev.map((img) =>
-              img.preview === image.preview
-                ? { ...img, analyzing: false, complete: true, ...analysis }
-                : img
-            )
-          );
-        }, 1500);
-      }, 1000 + index * 500);
-    });
+      } catch {
+        setUploadedImages((prev) =>
+          prev.map((img) =>
+            img.preview === image.preview
+              ? {
+                  ...img,
+                  analyzing: false,
+                  complete: true,
+                  score: 0,
+                  risk: 'Analysis Failed',
+                  assetId: 'ERR',
+                }
+              : img
+          )
+        );
+      }
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {

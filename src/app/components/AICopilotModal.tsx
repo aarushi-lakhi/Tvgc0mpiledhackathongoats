@@ -32,32 +32,43 @@ export function AICopilotModal({ isOpen, onClose }: AICopilotModalProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
 
     const userMessage: Message = { role: 'user', content: input };
     setMessages((prev) => [...prev, userMessage]);
+    const query = input;
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        'Based on current data, I recommend prioritizing assets AUS-002 and AUS-008 for immediate inspection. Both show critical vulnerability scores above 85.',
-        'Analysis complete. The vegetation encroachment issue at AUS-001 requires urgent attention. Historical data shows similar cases led to service interruptions within 14 days if not addressed.',
-        'I\'ve identified a pattern: assets in the northwest quadrant are experiencing higher-than-average transformer rust. This correlates with recent humidity levels. Recommend preventive coating application.',
-        'The current maintenance schedule appears optimal. However, consider increasing inspection frequency for high-risk zones during storm season (May-September).',
-        'I can help with that. Would you like me to generate a detailed maintenance report or schedule a crew dispatch?',
-      ];
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: query }),
+      });
 
-      const aiMessage: Message = {
-        role: 'assistant',
-        content: responses[Math.floor(Math.random() * responses.length)],
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
+      const data = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: res.ok
+            ? data.response
+            : 'Sorry, I encountered an error processing your request.',
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Network error — is the backend server running?',
+        },
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -167,7 +178,7 @@ export function AICopilotModal({ isOpen, onClose }: AICopilotModalProps) {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isTyping}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Send className="w-5 h-5" />
