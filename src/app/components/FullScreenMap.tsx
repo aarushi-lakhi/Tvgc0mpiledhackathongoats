@@ -184,26 +184,26 @@ export function FullScreenMap({
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
       {/* Legend */}
-      <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-md border border-white/20 rounded-xl shadow-lg p-4 transition-all hover:scale-105 pointer-events-none">
-        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+      <div className="absolute bottom-6 left-6 z-[1000] bg-white rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.15)] p-4 pointer-events-none">
+        <div className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">
           Risk Assessment
         </div>
-        <div className="space-y-2 pointer-events-auto">
+        <div className="space-y-2.5 pointer-events-auto">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
-            <span className="text-xs font-medium text-gray-700">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+            <span className="text-[12px] text-gray-700">
               Critical (High Risk)
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
-            <span className="text-xs font-medium text-gray-700">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <span className="text-[12px] text-gray-700">
               Warning (Medium)
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-emerald-500" />
-            <span className="text-xs font-medium text-gray-700">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <span className="text-[12px] text-gray-700">
               Stable (Low Risk)
             </span>
           </div>
