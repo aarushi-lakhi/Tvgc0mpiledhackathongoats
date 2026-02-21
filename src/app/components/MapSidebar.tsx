@@ -1,4 +1,4 @@
-import { X, MapPin, Clock, AlertTriangle, Send, FileText, ShieldCheck } from 'lucide-react';
+import { X, MapPin, Clock, AlertTriangle, Send, FileText, ShieldCheck, Truck, CheckCircle2 } from 'lucide-react';
 import { VulnerabilityGauge } from './VulnerabilityGauge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useNavigate } from 'react-router';
@@ -14,6 +14,8 @@ interface MapMarker {
 interface MapSidebarProps {
   marker: MapMarker | null;
   onClose: () => void;
+  onDispatchCrew?: (markerId: string) => void;
+  isDispatched?: boolean;
 }
 
 /* ── Image mapping by identified risk ── */
@@ -235,7 +237,7 @@ function getDetectedComponents(identifiedRisk: string): { name: string; confiden
 
 /* ── Component ── */
 
-export function MapSidebar({ marker, onClose }: MapSidebarProps) {
+export function MapSidebar({ marker, onClose, onDispatchCrew, isDispatched = false }: MapSidebarProps) {
   const navigate = useNavigate();
 
   if (!marker) return null;
@@ -419,10 +421,20 @@ export function MapSidebar({ marker, onClose }: MapSidebarProps) {
             Full Inspection Report
           </button>
           {marker.risk === 'high' && (
-            <button className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors text-[14px]">
-              <Send className="w-4 h-4" />
-              Dispatch Crew
-            </button>
+            isDispatched ? (
+              <div className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[14px]">
+                <CheckCircle2 className="w-4 h-4" />
+                Crew Dispatched — En Route
+              </div>
+            ) : (
+              <button
+                onClick={() => onDispatchCrew?.(marker.id)}
+                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors text-[14px]"
+              >
+                <Truck className="w-4 h-4" />
+                Dispatch Crew
+              </button>
+            )
           )}
         </div>
       </div>
