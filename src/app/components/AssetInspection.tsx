@@ -176,94 +176,97 @@ export function AssetInspection({ onBack }: AssetInspectionProps) {
         </div>
 
         {/* Right Side - AI Analysis Results */}
-        <div className="w-[480px] bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
+        <div className="w-[480px] bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50 flex-shrink-0">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-600" />
               <h2 className="text-lg font-semibold text-gray-900">AI Analysis Results</h2>
             </div>
           </div>
 
-          {/* Vulnerability Score */}
-          <div className="px-6 py-8 border-b border-gray-200">
-            <div className="text-center mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                Vulnerability Score
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Vulnerability Score */}
+            <div className="px-6 py-8 border-b border-gray-200">
+              <div className="text-center mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                  Vulnerability Score
+                </h3>
+              </div>
+              <VulnerabilityGauge score={88} />
+            </div>
+
+            {/* Metadata */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <span className="text-gray-600">GPS Coordinates:</span>
+                    <span className="ml-2 font-mono text-gray-900">30.2749, -97.7341</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <span className="text-gray-600">Upload Time:</span>
+                    <span className="ml-2 font-medium text-gray-900">Feb 21, 2026 - 14:32 CST</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Summary */}
+            <div className="px-6 py-6">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                AI Summary
               </h3>
-            </div>
-            <VulnerabilityGauge score={88} />
-          </div>
-
-          {/* Metadata */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-gray-500" />
-                <div>
-                  <span className="text-gray-600">GPS Coordinates:</span>
-                  <span className="ml-2 font-mono text-gray-900">30.2749, -97.7341</span>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-2 text-sm text-gray-900 leading-relaxed">
+                    <p>
+                      <span className="font-semibold text-red-700">Critical alert:</span> Tree
+                      branches detected within 3 feet of high-voltage lines. Immediate vegetation
+                      management required to prevent potential arc flash or line contact during
+                      high winds.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-red-700">Moderate rust detected</span> on
+                      transformer housing. Corrosion level at 80% coverage indicates advanced
+                      deterioration. Recommend inspection for structural integrity and potential
+                      oil leaks.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <div>
-                  <span className="text-gray-600">Upload Time:</span>
-                  <span className="ml-2 font-medium text-gray-900">Feb 21, 2026 - 14:32 CST</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* AI Summary */}
-          <div className="flex-1 px-6 py-6">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-              AI Summary
-            </h3>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-2 text-sm text-gray-900 leading-relaxed">
-                  <p>
-                    <span className="font-semibold text-red-700">Critical alert:</span> Tree
-                    branches detected within 3 feet of high-voltage lines. Immediate vegetation
-                    management required to prevent potential arc flash or line contact during
-                    high winds.
-                  </p>
-                  <p>
-                    <span className="font-semibold text-red-700">Moderate rust detected</span> on
-                    transformer housing. Corrosion level at 80% coverage indicates advanced
-                    deterioration. Recommend inspection for structural integrity and potential
-                    oil leaks.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Detections */}
-            <div className="mt-6 space-y-3">
-              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                Detected Objects
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700">Transformer</span>
-                  <span className="text-xs font-medium text-gray-500">Confidence: 98%</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700">Vegetation (High Risk)</span>
-                  <span className="text-xs font-medium text-gray-500">Confidence: 95%</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700">Power Lines</span>
-                  <span className="text-xs font-medium text-gray-500">Confidence: 99%</span>
+              {/* Additional Detections */}
+              <div className="mt-6 space-y-3">
+                <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Detected Objects
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-700">Transformer</span>
+                    <span className="text-xs font-medium text-gray-500">Confidence: 98%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-700">Vegetation (High Risk)</span>
+                    <span className="text-xs font-medium text-gray-500">Confidence: 95%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-700">Power Lines</span>
+                    <span className="text-xs font-medium text-gray-500">Confidence: 99%</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="px-6 py-6 border-t border-gray-200 bg-gray-50">
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="px-6 py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="space-y-3">
               <button className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                 <Save className="w-5 h-5" />
