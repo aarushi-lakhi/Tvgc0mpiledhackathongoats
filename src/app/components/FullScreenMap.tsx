@@ -3,8 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Austin, TX coordinates
-const CENTER: L.LatLngExpression = [30.2672, -97.7431];
-const DEFAULT_ZOOM = 13;
+const CENTER: L.LatLngExpression = [30.3000, -97.7500];
+const DEFAULT_ZOOM = 12;
 
 interface MapMarker {
   id: string;
