@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -24,6 +24,7 @@ interface FullScreenMapProps {
   selectedMarker: MapMarker | null;
   onMarkerClick: (marker: MapMarker) => void;
   dispatchedMarkerIds?: Set<string>;
+  onRouteInfo?: (info: { distanceKm: number; durationMin: number }) => void;
 }
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -40,7 +41,6 @@ function createPinIcon(risk: 'high' | 'medium' | 'low', dispatched = false) {
   const w = Math.round(32 * scale);
   const h = Math.round(42 * scale);
 
-  // Pulsing ring for dispatched markers
   const pulseRing = dispatched
     ? `<style>
         @keyframes dispatch-pulse {
@@ -53,7 +53,6 @@ function createPinIcon(risk: 'high' | 'medium' | 'low', dispatched = false) {
       <circle cx="16" cy="16" r="15" fill="none" stroke="#2563eb" stroke-width="1.5" opacity="0.3"/>`
     : '';
 
-  // Truck icon overlay for dispatched markers
   const truckOverlay = dispatched
     ? `<circle cx="24" cy="6" r="6" fill="#2563eb" stroke="white" stroke-width="1.5"/>
        <path d="M21.5 5 L23 5 L23 7 L24.5 7 L24.5 5.5 L25.5 6.5 L25.5 7 L26.5 7 L26.5 5 L25 5 L25 4.5 L22 4.5 L22 7 L21.5 7 Z" fill="white"/>`
@@ -173,6 +172,50 @@ export function optimizeRoute(
   return { order, totalKm };
 }
 
+/* ── OSRM road-following route ─────────────────────────── */
+
+interface OSRMRouteResult {
+  coordinates: [number, number][]; // [lat, lng]
+  distanceKm: number;
+  durationMin: number;
+}
+
+/**
+ * Calls the free OSRM public routing API to get a real road-following route.
+ * Falls back to straight lines on error.
+ */
+async function fetchOSRMRoute(
+  waypoints: { lat: number; lng: number }[]
+): Promise<OSRMRouteResult | null> {
+  if (waypoints.length < 2) return null;
+
+  // OSRM format: lng,lat;lng,lat;...
+  const coords = waypoints.map((w) => `${w.lng},${w.lat}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.[0]) return null;
+
+    const route = data.routes[0];
+    // GeoJSON coordinates are [lng, lat] — flip to [lat, lng] for Leaflet
+    const coordinates: [number, number][] = route.geometry.coordinates.map(
+      (c: [number, number]) => [c[1], c[0]] as [number, number]
+    );
+
+    return {
+      coordinates,
+      distanceKm: route.distance / 1000,
+      durationMin: route.duration / 60,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ── main component ──────────────────────────────────────── */
 
 export function FullScreenMap({
@@ -180,6 +223,7 @@ export function FullScreenMap({
   selectedMarker,
   onMarkerClick,
   dispatchedMarkerIds = new Set(),
+  onRouteInfo,
 }: FullScreenMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -188,10 +232,15 @@ export function FullScreenMap({
   const depotMarkerRef = useRef<L.Marker | null>(null);
   const onMarkerClickRef = useRef(onMarkerClick);
   onMarkerClickRef.current = onMarkerClick;
+  const onRouteInfoRef = useRef(onRouteInfo);
+  onRouteInfoRef.current = onRouteInfo;
+  const routeRequestIdRef = useRef(0);
+  const isAliveRef = useRef(true);
 
   /* ── Initialize the map once ── */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    isAliveRef.current = true;
 
     const map = L.map(containerRef.current, {
       center: CENTER,
@@ -213,6 +262,8 @@ export function FullScreenMap({
     mapRef.current = map;
 
     return () => {
+      isAliveRef.current = false;
+      routeRequestIdRef.current++;
       map.remove();
       mapRef.current = null;
       leafletMarkersRef.current.clear();
@@ -263,6 +314,111 @@ export function FullScreenMap({
     });
   }, [markers, dispatchedMarkerIds]);
 
+  /* ── Helper to draw route layers ── */
+  const drawRoute = useCallback(
+    (
+      routeCoords: L.LatLngExpression[],
+      orderedMarkers: MapMarker[],
+      map: L.Map,
+      routeLayer: L.LayerGroup
+    ) => {
+      // Guard: bail if map was destroyed
+      if (!isAliveRef.current || !mapRef.current) return;
+
+      // Glow line underneath
+      routeLayer.addLayer(
+        L.polyline(routeCoords, {
+          color: '#2563eb',
+          weight: 12,
+          opacity: 0.12,
+          smoothFactor: 1,
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+      );
+
+      // Main solid route line
+      routeLayer.addLayer(
+        L.polyline(routeCoords, {
+          color: '#2563eb',
+          weight: 5,
+          opacity: 0.85,
+          smoothFactor: 1,
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+      );
+
+      // Animated dashed overlay
+      routeLayer.addLayer(
+        L.polyline(routeCoords, {
+          color: '#93c5fd',
+          weight: 5,
+          opacity: 0.5,
+          dashArray: '10, 14',
+          smoothFactor: 1,
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+      );
+
+      // Stop number labels
+      orderedMarkers.forEach((marker, index) => {
+        const stopLabel = L.divIcon({
+          html: `<div style="
+            width:22px;height:22px;border-radius:50%;
+            background:#2563eb;color:white;
+            display:flex;align-items:center;justify-content:center;
+            font-size:11px;font-weight:700;font-family:system-ui;
+            border:2px solid white;
+            box-shadow:0 1px 4px rgba(0,0,0,0.3);
+          ">${index + 1}</div>`,
+          className: '',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        });
+
+        routeLayer.addLayer(
+          L.marker([marker.lat, marker.lng], {
+            icon: stopLabel,
+            zIndexOffset: 1000,
+            interactive: false,
+          })
+        );
+      });
+
+      // Depot marker
+      if (depotMarkerRef.current) {
+        depotMarkerRef.current.remove();
+      }
+
+      // Guard again before adding to map
+      if (!isAliveRef.current || !mapRef.current) return;
+
+      depotMarkerRef.current = L.marker(DEPOT, {
+        icon: createDepotIcon(),
+        zIndexOffset: 1100,
+      })
+        .bindPopup(
+          `<div style="font-family:system-ui;padding:4px 6px;">
+            <strong style="font-size:13px;color:#111827;">Austin Energy HQ</strong>
+            <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Crew dispatch origin</p>
+          </div>`,
+          { closeButton: false }
+        )
+        .addTo(map);
+
+      // Fit bounds (no animation to avoid race with cleanup)
+      const allPoints: L.LatLngExpression[] = [
+        DEPOT,
+        ...orderedMarkers.map((m) => [m.lat, m.lng] as L.LatLngExpression),
+      ];
+      const bounds = L.latLngBounds(allPoints);
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14, animate: false });
+    },
+    []
+  );
+
   /* ── Draw route for dispatched markers ── */
   useEffect(() => {
     const map = mapRef.current;
@@ -276,53 +432,45 @@ export function FullScreenMap({
       depotMarkerRef.current = null;
     }
 
-    if (dispatchedMarkerIds.size === 0) return;
+    if (dispatchedMarkerIds.size === 0) {
+      onRouteInfoRef.current?.({ distanceKm: 0, durationMin: 0 });
+      return;
+    }
 
     const dispatchedMarkers = markers.filter((m) => dispatchedMarkerIds.has(m.id));
     if (dispatchedMarkers.length === 0) return;
 
     const depot: [number, number] = [DEPOT[0] as number, DEPOT[1] as number];
-    const { order } = optimizeRoute(depot, dispatchedMarkers);
+    const { order, totalKm } = optimizeRoute(depot, dispatchedMarkers);
     const orderedMarkers = order.map((i) => dispatchedMarkers[i]);
 
-    // Build route points: depot -> ordered markers
-    const routePoints: L.LatLngExpression[] = [
-      DEPOT,
-      ...orderedMarkers.map((m) => [m.lat, m.lng] as L.LatLngExpression),
+    // Build waypoints for OSRM: depot + ordered markers
+    const waypoints = [
+      { lat: depot[0], lng: depot[1] },
+      ...orderedMarkers.map((m) => ({ lat: m.lat, lng: m.lng })),
     ];
 
-    // Draw the main route line (solid blue)
-    const mainLine = L.polyline(routePoints, {
-      color: '#2563eb',
-      weight: 4,
-      opacity: 0.8,
-      smoothFactor: 1.5,
-      lineJoin: 'round',
-    });
-    routeLayer.addLayer(mainLine);
+    // Increment request ID to handle race conditions
+    const requestId = ++routeRequestIdRef.current;
 
-    // Draw animated dashed overlay
-    const dashLine = L.polyline(routePoints, {
-      color: '#60a5fa',
-      weight: 4,
-      opacity: 0.6,
-      dashArray: '12, 8',
-      smoothFactor: 1.5,
-      lineJoin: 'round',
-    });
-    routeLayer.addLayer(dashLine);
+    // Immediately draw a straight-line fallback while we wait for OSRM
+    const straightPoints: L.LatLngExpression[] = waypoints.map(
+      (w) => [w.lat, w.lng] as L.LatLngExpression
+    );
 
-    // Draw a glow line underneath
-    const glowLine = L.polyline(routePoints, {
-      color: '#2563eb',
-      weight: 10,
-      opacity: 0.15,
-      smoothFactor: 1.5,
-      lineJoin: 'round',
-    });
-    routeLayer.addLayer(glowLine);
+    // Show a subtle loading state with thinner dashed line
+    routeLayer.addLayer(
+      L.polyline(straightPoints, {
+        color: '#93c5fd',
+        weight: 3,
+        opacity: 0.4,
+        dashArray: '6, 8',
+        smoothFactor: 1,
+        lineJoin: 'round',
+      })
+    );
 
-    // Add stop number labels along the route
+    // Add stop labels immediately
     orderedMarkers.forEach((marker, index) => {
       const stopLabel = L.divIcon({
         html: `<div style="
@@ -338,15 +486,16 @@ export function FullScreenMap({
         iconAnchor: [11, 11],
       });
 
-      const stopMarker = L.marker([marker.lat, marker.lng], {
-        icon: stopLabel,
-        zIndexOffset: 1000,
-        interactive: false,
-      });
-      routeLayer.addLayer(stopMarker);
+      routeLayer.addLayer(
+        L.marker([marker.lat, marker.lng], {
+          icon: stopLabel,
+          zIndexOffset: 1000,
+          interactive: false,
+        })
+      );
     });
 
-    // Add depot marker
+    // Add depot marker immediately
     depotMarkerRef.current = L.marker(DEPOT, {
       icon: createDepotIcon(),
       zIndexOffset: 1100,
@@ -360,17 +509,60 @@ export function FullScreenMap({
       )
       .addTo(map);
 
-    // Fit the map to show the entire route
-    const bounds = L.latLngBounds(routePoints);
-    map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14, duration: 0.6 });
-  }, [dispatchedMarkerIds, markers]);
+    // Report straight-line estimate immediately
+    onRouteInfoRef.current?.({
+      distanceKm: totalKm,
+      durationMin: (totalKm / 25) * 60,
+    });
+
+    // Fit bounds immediately
+    const bounds = L.latLngBounds(straightPoints);
+    map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14, animate: false });
+
+    // Now fetch the real road route from OSRM
+    fetchOSRMRoute(waypoints).then((result) => {
+      // Bail if component unmounted or a newer request has been made
+      if (!isAliveRef.current) return;
+      if (routeRequestIdRef.current !== requestId) return;
+
+      const liveMap = mapRef.current;
+      const liveRouteLayer = routeLayerRef.current;
+      if (!liveMap || !liveRouteLayer) return;
+
+      // Clear the loading state
+      liveRouteLayer.clearLayers();
+      if (depotMarkerRef.current) {
+        depotMarkerRef.current.remove();
+        depotMarkerRef.current = null;
+      }
+
+      if (result) {
+        // Draw road-following route
+        drawRoute(result.coordinates, orderedMarkers, liveMap, liveRouteLayer);
+
+        // Report actual road distance/duration
+        onRouteInfoRef.current?.({
+          distanceKm: result.distanceKm,
+          durationMin: result.durationMin,
+        });
+
+        // Re-fit bounds to the road route
+        if (isAliveRef.current && mapRef.current) {
+          const routeBounds = L.latLngBounds(result.coordinates);
+          liveMap.fitBounds(routeBounds, { padding: [80, 80], maxZoom: 14, animate: false });
+        }
+      } else {
+        // OSRM failed — draw straight-line fallback
+        drawRoute(straightPoints, orderedMarkers, liveMap, liveRouteLayer);
+      }
+    });
+  }, [dispatchedMarkerIds, markers, drawRoute]);
 
   /* ── Fly to selected marker ── */
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedMarker) return;
 
-    // Only fly to if no dispatched markers (otherwise fitBounds handles it)
     if (dispatchedMarkerIds.size === 0) {
       map.flyTo([selectedMarker.lat, selectedMarker.lng], map.getZoom(), {
         duration: 0.5,

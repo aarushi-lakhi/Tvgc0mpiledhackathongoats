@@ -1,4 +1,4 @@
-import { Truck, X, Clock, Route, MapPin, CheckCircle2 } from 'lucide-react';
+import { Truck, X, Clock, Route, CheckCircle2 } from 'lucide-react';
 
 interface MapMarker {
   id: string;
@@ -13,6 +13,7 @@ interface MapMarker {
 interface DispatchPanelProps {
   dispatchedMarkers: MapMarker[];
   routeDistance: number; // km
+  routeDuration: number; // minutes (from OSRM)
   onClearAll: () => void;
   onRemoveMarker: (id: string) => void;
   onFocusMarker: (marker: MapMarker) => void;
@@ -21,18 +22,22 @@ interface DispatchPanelProps {
 export function DispatchPanel({
   dispatchedMarkers,
   routeDistance,
+  routeDuration,
   onClearAll,
   onRemoveMarker,
   onFocusMarker,
 }: DispatchPanelProps) {
   if (dispatchedMarkers.length === 0) return null;
 
-  // Rough ETA: average 25 km/h in city + 15 min per stop for inspection
-  const driveTimeMin = Math.round((routeDistance / 25) * 60);
+  // OSRM gives driving time; add 15 min per stop for inspection
   const inspectionTimeMin = dispatchedMarkers.length * 15;
-  const totalTimeMin = driveTimeMin + inspectionTimeMin;
+  const totalTimeMin = Math.round(routeDuration) + inspectionTimeMin;
   const hours = Math.floor(totalTimeMin / 60);
   const mins = totalTimeMin % 60;
+
+  // Also show just driving time
+  const driveHours = Math.floor(routeDuration / 60);
+  const driveMins = Math.round(routeDuration % 60);
 
   return (
     <div className="absolute bottom-6 right-6 z-[1100] w-80 bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden animate-slide-up">
@@ -120,8 +125,8 @@ export function DispatchPanel({
       {/* Footer */}
       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
         <div className="flex items-center gap-2 text-[12px] text-gray-500">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Route optimized via nearest-neighbor</span>
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span>Road-optimized route · {driveHours > 0 ? `${driveHours}h ` : ''}{driveMins}m drive + {inspectionTimeMin}m inspection</span>
         </div>
       </div>
     </div>
