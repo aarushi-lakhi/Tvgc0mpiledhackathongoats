@@ -1,4 +1,5 @@
 import { AlertCircle, Wrench } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 interface Asset {
   id: string;
@@ -18,6 +19,8 @@ const assets: Asset[] = [
 ];
 
 export function HighRiskAssetsTable() {
+  const navigate = useNavigate();
+
   const getScoreBadgeColor = (score: number): string => {
     if (score >= 70) return 'bg-red-100 text-red-700 border-red-200';
     if (score >= 50) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -71,9 +74,12 @@ export function HighRiskAssetsTable() {
                   {asset.identifiedRisk}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => navigate(`/inspection/${asset.id}`)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
                     <Wrench className="w-4 h-4" />
-                    Schedule Repair
+                    View Details
                   </button>
                 </td>
               </tr>
