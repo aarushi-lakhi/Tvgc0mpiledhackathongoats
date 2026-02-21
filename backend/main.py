@@ -33,6 +33,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     database.init_db()
+    database.seed_if_empty()
 
 
 @app.post("/api/analyze-image", response_model=ImageAnalysisResponse)

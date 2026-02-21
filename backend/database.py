@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from seed_data import SEED_ASSETS
+
 DB_PATH = Path(__file__).parent / "grid_assets.db"
 
 _SCHEMA = """
@@ -62,6 +64,24 @@ def _score_to_risk(score: int) -> str:
     if score >= 50:
         return "medium"
     return "low"
+
+
+def seed_if_empty() -> None:
+    """Seed the database with fake assets when empty (for AI advisor queries)."""
+    with _get_conn() as conn:
+        row = conn.execute("SELECT COUNT(*) AS n FROM assets").fetchone()
+        if row["n"] > 0:
+            return
+        for a in SEED_ASSETS:
+            summary = f"{a['risk_label']} (vulnerability_score: {a['score']})"
+            conn.execute(
+                """
+                INSERT INTO assets (asset_id, lat, lng, score, risk_label, summary, image_b64)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (a["asset_id"], a["lat"], a["lng"], a["score"], a["risk_label"], summary, None),
+            )
+        conn.commit()
 
 
 def get_all_assets() -> list[dict]:
