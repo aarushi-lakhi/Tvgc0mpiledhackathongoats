@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
-import { FullScreenMap } from '../components/FullScreenMap';
+import { useState, useMemo, useCallback } from 'react';
+import { FullScreenMap, optimizeRoute } from '../components/FullScreenMap';
 import { MapSidebar } from '../components/MapSidebar';
 import { ImageUploadModal } from '../components/ImageUploadModal';
 import { AICopilotModal } from '../components/AICopilotModal';
 import { FloatingHeader } from '../components/FloatingHeader';
+import { DispatchPanel } from '../components/DispatchPanel';
+import { toast, Toaster } from 'sonner';
 
 interface MapMarker {
   id: string;
@@ -14,6 +16,8 @@ interface MapMarker {
   identifiedRisk: string;
   gps: string;
 }
+
+const DEPOT: [number, number] = [30.2650, -97.7386];
 
 const RAW_MARKERS = [
   // === Downtown & Central ===
@@ -95,6 +99,7 @@ export function Dashboard() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
+  const [dispatchedIds, setDispatchedIds] = useState<Set<string>>(new Set());
 
   const markers: MapMarker[] = useMemo(() => {
     return RAW_MARKERS.map(m => {
@@ -108,6 +113,19 @@ export function Dashboard() {
     });
   }, []);
 
+  // Get the dispatched markers in optimized order
+  const { orderedDispatchedMarkers, routeDistance } = useMemo(() => {
+    if (dispatchedIds.size === 0) {
+      return { orderedDispatchedMarkers: [], routeDistance: 0 };
+    }
+    const dispatched = markers.filter(m => dispatchedIds.has(m.id));
+    const { order, totalKm } = optimizeRoute(DEPOT, dispatched);
+    return {
+      orderedDispatchedMarkers: order.map(i => dispatched[i]),
+      routeDistance: totalKm,
+    };
+  }, [dispatchedIds, markers]);
+
   const handleMarkerClick = (marker: MapMarker) => {
     setSelectedMarker(marker);
   };
@@ -116,8 +134,56 @@ export function Dashboard() {
     setSelectedMarker(null);
   };
 
+  const handleDispatchCrew = useCallback((markerId: string) => {
+    setDispatchedIds(prev => {
+      const next = new Set(prev);
+      next.add(markerId);
+      return next;
+    });
+
+    const marker = markers.find(m => m.id === markerId);
+    toast.success(
+      `Crew dispatched to ${markerId}`,
+      {
+        description: marker
+          ? `${marker.identifiedRisk} — Route updated`
+          : 'Route updated',
+        duration: 4000,
+      }
+    );
+  }, [markers]);
+
+  const handleRemoveDispatch = useCallback((markerId: string) => {
+    setDispatchedIds(prev => {
+      const next = new Set(prev);
+      next.delete(markerId);
+      return next;
+    });
+    toast.info(`Removed ${markerId} from dispatch queue`);
+  }, []);
+
+  const handleClearAllDispatches = useCallback(() => {
+    setDispatchedIds(new Set());
+    toast.info('All dispatches cleared');
+  }, []);
+
+  const handleFocusMarker = useCallback((marker: MapMarker) => {
+    setSelectedMarker(marker);
+  }, []);
+
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-gray-100">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          },
+        }}
+      />
+
       {/* Floating Header */}
       <FloatingHeader 
         onAICopilotOpen={() => setIsAICopilotOpen(true)}
@@ -130,13 +196,28 @@ export function Dashboard() {
           markers={markers}
           selectedMarker={selectedMarker}
           onMarkerClick={handleMarkerClick}
+          dispatchedMarkerIds={dispatchedIds}
         />
       </div>
 
       {/* Map Sidebar */}
       {selectedMarker && (
-        <MapSidebar marker={selectedMarker} onClose={handleCloseSidebar} />
+        <MapSidebar
+          marker={selectedMarker}
+          onClose={handleCloseSidebar}
+          onDispatchCrew={handleDispatchCrew}
+          isDispatched={dispatchedIds.has(selectedMarker.id)}
+        />
       )}
+
+      {/* Dispatch Panel */}
+      <DispatchPanel
+        dispatchedMarkers={orderedDispatchedMarkers}
+        routeDistance={routeDistance}
+        onClearAll={handleClearAllDispatches}
+        onRemoveMarker={handleRemoveDispatch}
+        onFocusMarker={handleFocusMarker}
+      />
 
       {/* Image Upload Modal */}
       <ImageUploadModal
