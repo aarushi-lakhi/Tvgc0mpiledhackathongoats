@@ -5,8 +5,6 @@ import { useNavigate } from 'react-router';
 
 interface MapMarker {
   id: string;
-  x: number;
-  y: number;
   risk: 'high' | 'medium' | 'low';
   vulnerabilityScore: number;
   identifiedRisk: string;
