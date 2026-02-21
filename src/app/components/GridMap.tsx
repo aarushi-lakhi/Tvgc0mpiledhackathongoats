@@ -90,47 +90,182 @@ export function GridMap() {
       </div>
 
       {/* Map Background with Grid */}
-      <div className="h-full w-full bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
-        {/* Grid lines to simulate map */}
-        <svg className="absolute inset-0 w-full h-full opacity-20">
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="gray" strokeWidth="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-
-        {/* Simulated city streets/blocks */}
+      <div className="h-full w-full bg-[#f0ede4] relative overflow-hidden">
+        {/* Zoomed container */}
         <div className="absolute inset-0" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
-          {/* Main roads */}
-          <div className="absolute top-1/4 left-0 right-0 h-1 bg-gray-300 opacity-40"></div>
-          <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gray-400 opacity-50"></div>
-          <div className="absolute top-3/4 left-0 right-0 h-1 bg-gray-300 opacity-40"></div>
-          <div className="absolute left-1/4 top-0 bottom-0 w-1 bg-gray-300 opacity-40"></div>
-          <div className="absolute left-1/2 top-0 bottom-0 w-1.5 bg-gray-400 opacity-50"></div>
-          <div className="absolute left-3/4 top-0 bottom-0 w-1 bg-gray-300 opacity-40"></div>
+          
+          {/* Colorado River - curved through the map */}
+          <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
+            <path
+              d="M -50 200 Q 150 180, 300 220 T 650 240 L 650 270 Q 550 255, 300 250 T -50 230 Z"
+              fill="#b8d4e8"
+              opacity="0.6"
+            />
+            <path
+              d="M -50 200 Q 150 180, 300 220 T 650 240"
+              fill="none"
+              stroke="#9cb8cc"
+              strokeWidth="2"
+              opacity="0.4"
+            />
+          </svg>
 
-          {/* City blocks */}
-          {[...Array(20)].map((_, i) => (
+          {/* Lady Bird Lake / Town Lake */}
+          <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
+            <ellipse
+              cx="50%"
+              cy="55%"
+              rx="25%"
+              ry="8%"
+              fill="#b8d4e8"
+              opacity="0.5"
+            />
+          </svg>
+
+          {/* Parks and green spaces */}
+          <div className="absolute top-[12%] left-[15%] w-[12%] h-[15%] bg-green-200 opacity-30 rounded-lg" style={{ zIndex: 2 }}></div>
+          <div className="absolute top-[60%] left-[40%] w-[18%] h-[20%] bg-green-200 opacity-30 rounded-lg" style={{ zIndex: 2 }}></div>
+          <div className="absolute top-[25%] right-[10%] w-[15%] h-[12%] bg-green-200 opacity-30 rounded-lg" style={{ zIndex: 2 }}></div>
+
+          {/* Major highways - I-35 (diagonal) */}
+          <div 
+            className="absolute top-0 bottom-0 w-3 bg-gray-400 opacity-50" 
+            style={{ 
+              left: '45%',
+              transform: 'rotate(2deg)',
+              transformOrigin: 'top center',
+              zIndex: 3
+            }}
+          ></div>
+          <div 
+            className="absolute top-0 bottom-0 w-2.5 bg-yellow-100 opacity-40" 
+            style={{ 
+              left: 'calc(45% + 2px)',
+              transform: 'rotate(2deg)',
+              transformOrigin: 'top center',
+              zIndex: 3
+            }}
+          ></div>
+
+          {/* Highway 183 (diagonal northeast) */}
+          <div 
+            className="absolute left-0 right-0 h-2.5 bg-gray-400 opacity-40" 
+            style={{ 
+              top: '30%',
+              transform: 'rotate(-8deg)',
+              transformOrigin: 'left center',
+              zIndex: 3
+            }}
+          ></div>
+
+          {/* MoPac (Loop 1) - west side */}
+          <div className="absolute top-0 bottom-0 left-[25%] w-2.5 bg-gray-400 opacity-40" style={{ zIndex: 3 }}></div>
+
+          {/* Highway 71 (east-west) */}
+          <div className="absolute left-0 right-0 top-[65%] h-2 bg-gray-400 opacity-40" style={{ zIndex: 3 }}></div>
+
+          {/* Major streets - Lamar Blvd */}
+          <div className="absolute top-0 bottom-0 left-[35%] w-1.5 bg-gray-300 opacity-35" style={{ zIndex: 4 }}></div>
+
+          {/* Guadalupe / Lavaca (downtown) */}
+          <div className="absolute top-0 bottom-0 left-[48%] w-1 bg-gray-300 opacity-35" style={{ zIndex: 4 }}></div>
+          <div className="absolute top-0 bottom-0 left-[52%] w-1 bg-gray-300 opacity-35" style={{ zIndex: 4 }}></div>
+
+          {/* Congress Avenue */}
+          <div className="absolute top-0 bottom-0 left-[50%] w-1.5 bg-gray-300 opacity-40" style={{ zIndex: 4 }}></div>
+
+          {/* East-west arterials */}
+          <div className="absolute left-0 right-0 top-[20%] h-1 bg-gray-300 opacity-30" style={{ zIndex: 4 }}></div>
+          <div className="absolute left-0 right-0 top-[38%] h-1 bg-gray-300 opacity-30" style={{ zIndex: 4 }}></div>
+          <div className="absolute left-0 right-0 top-[48%] h-1.5 bg-gray-300 opacity-35" style={{ zIndex: 4 }}></div>
+          <div className="absolute left-0 right-0 top-[75%] h-1 bg-gray-300 opacity-30" style={{ zIndex: 4 }}></div>
+          <div className="absolute left-0 right-0 top-[85%] h-1 bg-gray-300 opacity-30" style={{ zIndex: 4 }}></div>
+
+          {/* Urban grid - denser in downtown area */}
+          <svg className="absolute inset-0 w-full h-full opacity-15" style={{ zIndex: 5 }}>
+            <defs>
+              <pattern id="downtown-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#666" strokeWidth="0.5"/>
+              </pattern>
+              <pattern id="sparse-grid" width="60" height="60" patternUnits="userSpaceOnUse">
+                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#999" strokeWidth="0.3"/>
+              </pattern>
+            </defs>
+            {/* Downtown dense grid */}
+            <rect x="40%" y="35%" width="25%" height="25%" fill="url(#downtown-grid)" />
+            {/* Suburban sparse grid */}
+            <rect width="100%" height="100%" fill="url(#sparse-grid)" />
+          </svg>
+
+          {/* Building blocks - downtown area */}
+          {[
+            { x: 42, y: 40, w: 3, h: 4 },
+            { x: 46, y: 38, w: 4, h: 5 },
+            { x: 51, y: 40, w: 3, h: 4 },
+            { x: 55, y: 42, w: 4, h: 6 },
+            { x: 48, y: 44, w: 2.5, h: 3 },
+            { x: 52, y: 46, w: 3, h: 4 },
+            { x: 44, y: 48, w: 3.5, h: 5 },
+            { x: 56, y: 48, w: 2, h: 3 },
+            { x: 47, y: 52, w: 4, h: 3 },
+            { x: 53, y: 50, w: 3, h: 4 },
+          ].map((block, i) => (
             <div
-              key={i}
-              className="absolute bg-gray-200 opacity-10 rounded"
+              key={`downtown-${i}`}
+              className="absolute bg-gray-300 opacity-20 rounded-sm shadow-sm"
               style={{
-                left: `${(i * 17 + 10) % 85}%`,
-                top: `${(i * 23 + 15) % 80}%`,
-                width: `${8 + (i % 3) * 2}%`,
-                height: `${6 + (i % 4) * 2}%`,
+                left: `${block.x}%`,
+                top: `${block.y}%`,
+                width: `${block.w}%`,
+                height: `${block.h}%`,
+                zIndex: 6,
               }}
             ></div>
           ))}
+
+          {/* Residential blocks - scattered */}
+          {[
+            { x: 15, y: 18, w: 6, h: 5 },
+            { x: 23, y: 15, w: 5, h: 4 },
+            { x: 18, y: 25, w: 7, h: 6 },
+            { x: 28, y: 22, w: 5, h: 5 },
+            { x: 12, y: 35, w: 8, h: 6 },
+            { x: 22, y: 38, w: 6, h: 5 },
+            { x: 65, y: 25, w: 7, h: 5 },
+            { x: 72, y: 22, w: 6, h: 6 },
+            { x: 68, y: 32, w: 5, h: 4 },
+            { x: 75, y: 35, w: 6, h: 5 },
+            { x: 15, y: 68, w: 8, h: 6 },
+            { x: 25, y: 70, w: 6, h: 5 },
+            { x: 58, y: 72, w: 7, h: 6 },
+            { x: 68, y: 68, w: 6, h: 5 },
+          ].map((block, i) => (
+            <div
+              key={`residential-${i}`}
+              className="absolute bg-gray-200 opacity-15 rounded"
+              style={{
+                left: `${block.x}%`,
+                top: `${block.y}%`,
+                width: `${block.w}%`,
+                height: `${block.h}%`,
+                zIndex: 6,
+              }}
+            ></div>
+          ))}
+
+          {/* Austin landmarks indicators */}
+          {/* Capitol area */}
+          <div className="absolute top-[42%] left-[49%] w-2 h-2 rounded-full bg-blue-400 opacity-40" style={{ zIndex: 7 }}></div>
+          
+          {/* UT Campus area */}
+          <div className="absolute top-[35%] left-[47%] w-8 h-6 border-2 border-orange-300 opacity-25 rounded" style={{ zIndex: 7 }}></div>
 
           {/* Utility Markers */}
           {markers.map((marker) => (
             <div
               key={marker.id}
               className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-              style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+              style={{ left: `${marker.x}%`, top: `${marker.y}%`, zIndex: 10 }}
               onClick={() => setSelectedMarker(marker)}
             >
               {/* Pulsing ring effect for high risk */}
