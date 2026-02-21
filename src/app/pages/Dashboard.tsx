@@ -1,9 +1,13 @@
-import { Zap, User } from 'lucide-react';
+import { Zap, User, Upload } from 'lucide-react';
+import { useState } from 'react';
 import { GridMap } from '../components/GridMap';
 import { HighRiskAssetsTable } from '../components/HighRiskAssetsTable';
 import { AICopilot } from '../components/AICopilot';
+import { ImageUploadModal } from '../components/ImageUploadModal';
 
 export function Dashboard() {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Top Navigation */}
@@ -19,6 +23,13 @@ export function Dashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Images
+              </button>
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-900">Sarah Martinez</div>
                 <div className="text-xs text-gray-500">Grid Operations Manager</div>
@@ -59,6 +70,12 @@ export function Dashboard() {
           <AICopilot />
         </div>
       </div>
+
+      {/* Image Upload Modal */}
+      <ImageUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
     </div>
   );
 }
