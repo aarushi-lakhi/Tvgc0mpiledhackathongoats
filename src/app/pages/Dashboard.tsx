@@ -100,6 +100,7 @@ export function Dashboard() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
   const [dispatchedIds, setDispatchedIds] = useState<Set<string>>(new Set());
+  const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMin: number }>({ distanceKm: 0, durationMin: 0 });
 
   const markers: MapMarker[] = useMemo(() => {
     return RAW_MARKERS.map(m => {
@@ -114,16 +115,11 @@ export function Dashboard() {
   }, []);
 
   // Get the dispatched markers in optimized order
-  const { orderedDispatchedMarkers, routeDistance } = useMemo(() => {
-    if (dispatchedIds.size === 0) {
-      return { orderedDispatchedMarkers: [], routeDistance: 0 };
-    }
+  const orderedDispatchedMarkers = useMemo(() => {
+    if (dispatchedIds.size === 0) return [];
     const dispatched = markers.filter(m => dispatchedIds.has(m.id));
-    const { order, totalKm } = optimizeRoute(DEPOT, dispatched);
-    return {
-      orderedDispatchedMarkers: order.map(i => dispatched[i]),
-      routeDistance: totalKm,
-    };
+    const { order } = optimizeRoute(DEPOT, dispatched);
+    return order.map(i => dispatched[i]);
   }, [dispatchedIds, markers]);
 
   const handleMarkerClick = (marker: MapMarker) => {
@@ -171,6 +167,10 @@ export function Dashboard() {
     setSelectedMarker(marker);
   }, []);
 
+  const handleRouteInfo = useCallback((info: { distanceKm: number; durationMin: number }) => {
+    setRouteInfo(info);
+  }, []);
+
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-gray-100">
       <Toaster
@@ -197,6 +197,7 @@ export function Dashboard() {
           selectedMarker={selectedMarker}
           onMarkerClick={handleMarkerClick}
           dispatchedMarkerIds={dispatchedIds}
+          onRouteInfo={handleRouteInfo}
         />
       </div>
 
@@ -213,7 +214,8 @@ export function Dashboard() {
       {/* Dispatch Panel */}
       <DispatchPanel
         dispatchedMarkers={orderedDispatchedMarkers}
-        routeDistance={routeDistance}
+        routeDistance={routeInfo.distanceKm}
+        routeDuration={routeInfo.durationMin}
         onClearAll={handleClearAllDispatches}
         onRemoveMarker={handleRemoveDispatch}
         onFocusMarker={handleFocusMarker}
