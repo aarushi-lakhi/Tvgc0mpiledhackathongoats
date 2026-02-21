@@ -178,4 +178,18 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+
+  /* Animations */
+  @keyframes slide-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
 }
